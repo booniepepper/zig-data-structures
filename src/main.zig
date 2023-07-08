@@ -1,3 +1,6 @@
-const evicting_list = @import("evicting_list.zig");
+const std = @import("std");
+pub const experimental = @import("experimental.zig");
 
-pub const EvictingList = evicting_list.EvictingList;
+test {
+    std.testing.refAllDecls(@This());
+}

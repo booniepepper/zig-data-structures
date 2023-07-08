@@ -39,19 +39,9 @@ pub fn build(b: *std.Build) void {
 
     const run_main_tests = b.addRunArtifact(main_tests);
 
-    // TODO: don't repeat yourself
-    const evicting_list_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/evicting_list.zig" },
-        .target = target,
-        .optimize = optimize,
-    });
-
-    const run_evicting_list_tests = b.addRunArtifact(evicting_list_tests);
-
     // This creates a build step. It will be visible in the `zig build --help` menu,
     // and can be selected like this: `zig build test`
     // This will evaluate the `test` step rather than the default, which is "install".
     const test_step = b.step("test", "Run library tests");
     test_step.dependOn(&run_main_tests.step);
-    test_step.dependOn(&run_evicting_list_tests.step);
 }
