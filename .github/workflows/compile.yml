@@ -1,0 +1,30 @@
+name: compile
+
+on:
+  push:
+    branches:
+      - core
+  pull_request:
+    branches:
+      - core
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2.1.0
+        # Defaults to a master release.
+        # If the project ever needs to pin a version, uncomment/update the next lines:
+        #with:
+        #  version: 0.11.0
+
+      - name: Checkout project
+        uses: actions/checkout@v3
+
+      - name: Build
+        run: zig build
+      
+      - name: Test
+        run: zig build test
