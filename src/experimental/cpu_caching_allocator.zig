@@ -152,11 +152,6 @@ const OrderedCache = struct {
     }
 };        
 
-// Similar to the GeneralPurposeAllocator, the CachingAllocator
-// will support bit alignment within [1, 2048]. Each step up
-// in index will be equivalent to another power of two for
-// alignment. So tabl[0] : align 1, table[3] : align 4...
-
 // I'm making a distinction for a CPU allocator because
 // other devices can use the caching allocator as well.
 
@@ -483,5 +478,97 @@ test "CPUCachingAllocator: alignment" {
     for(b) |*item| {
         item.x = 0;
         item.y = false;
+    }
+}
+
+test "CPUCachingAllocator: resize" {
+
+    // So testing resize is tough. Resizes can "fail"
+    // legitimately. That's why they return a bool and
+    // not an error. Unfortunately, that means it's
+    // awkward to test it directly. 
+
+    // That said, we can keep a few things in mind:
+
+    // 1. The resize function dispatches to the
+    //    backing_allocator.rawResize function.
+    //    Therfore, we would technically be
+    //    testing that ultimately.
+
+    // 2. Because of 1, the only way we can be
+    //    the source of failure is by either
+    //    failing to find the memory in cache,
+    //    identifying the wrong memory, failing
+    //    to deposit the memory, or leaking the
+    //    memory after resize.
+
+    // At this point, the deposit function is well
+    // established. So we need to show that the
+    // search function locateMemory identifies the
+    // correct memory in cache, and returns null
+    // on invalid requests.
+
+    const rand = @import("std").rand;
+
+    const TypeA = struct {
+        x: usize = 0      
+    };
+
+    var cpu_caching_allocator = CPUCachingAllocator{ };
+
+    defer cpu_caching_allocator.deinit();
+
+    var allocator = cpu_caching_allocator.allocator();
+
+    var PCG = rand.Pcg.init(42);
+    var pcg = PCG.random();
+
+    // To test locateMemory, we'll allocate in 100
+    // elements and force it to find the element after
+    // depositing it.
+
+    for (0..100) |_| {
+
+        var n = pcg.int(usize) % 100;
+
+        n = if(n == 0) 1 else n;
+
+        var data = try allocator.alloc(TypeA, n);
+
+        // deposit into cache...
+        allocator.free(data); 
+
+        var check: []u8 = std.mem.sliceAsBytes(data);
+
+        // lookup memory in allocator cache...
+        var index = cpu_caching_allocator.buffer.locateMemory(check);
+
+        // null means we didn't find it.
+        try std.testing.expect(index != null);
+
+        var item = cpu_caching_allocator.buffer.itemData(index.?);
+
+        // ensure that it is the same data.
+        try std.testing.expect(@intFromPtr(check.ptr) == @intFromPtr(item.ptr));
+    }
+    
+    // we need to be beyond the heuristic to test.
+    var data = try allocator.alloc(TypeA, 300);
+
+    { // check that un-cached memory isn't "found".
+        var check: []u8 = std.mem.sliceAsBytes(data);
+        var index = cpu_caching_allocator.buffer.locateMemory(check);
+        try std.testing.expect(index == null);
+    }
+
+    // deposit into cache...
+    allocator.free(data); 
+
+    { // check that cached memory is found.
+        var check: []u8 = std.mem.sliceAsBytes(data);
+        var index = cpu_caching_allocator.buffer.locateMemory(check);
+        try std.testing.expect(index != null);
+        var item = cpu_caching_allocator.buffer.itemData(index.?);
+        try std.testing.expect(@intFromPtr(check.ptr) == @intFromPtr(item.ptr));
     }
 }
