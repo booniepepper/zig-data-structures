@@ -307,7 +307,7 @@ pub const LinearCachingAllocator = struct {
         // locate pointer in cache (if exists)
         if (self.buffer.locateMemory(old_mem)) |idx| {
             
-            var data = self.buffer.cache.items[idx].data;
+            var data = self.buffer.itemData(idx);
 
             if (self.backing_allocator.rawResize(data, log2_align, new_len, ret_addr)) {
 
