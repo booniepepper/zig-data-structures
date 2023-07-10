@@ -64,9 +64,8 @@
 //    is no benefit to using this allocator in a program that only
 //    calls alloc and free once for a given item.
 //
-//    NOTE: the backing_backing allocator can be reassigned for different
+//    NOTE: the backing_allocator can be reassigned for different
 //    underyling allocators to be used. By default, it is the page_allocator.
-
 
 const std = @import("std");
 
@@ -136,7 +135,7 @@ const OrderedCache = struct {
 
     fn scanForUnused(self: *const Self, idx: usize, n: usize) ?[]u8 {
 
-        // heuristic: requests cannot grab allocations 2x their size
+        // heuristic: requests cannot grab allocations greater than 2x their size
         const limit = n <<| 1;
         
         var i = idx;
@@ -241,10 +240,10 @@ const OrderedCache = struct {
     }
 };        
 
-// I'm making a distinction for a CPU allocator because
-// other devices can use the caching allocator as well.
+////////////////////////////////////////////////////////
+//////// LinearCachingAllocator Implementation /////////
 
-const LinearCachingAllocator = struct {
+pub const LinearCachingAllocator = struct {
 
     const Self = @This();
 
@@ -308,16 +307,18 @@ const LinearCachingAllocator = struct {
         // locate pointer in cache (if exists)
         if (self.buffer.locateMemory(old_mem)) |idx| {
             
-            var data = self.buffer.cache.items[idx].data;
+            var data = self.buffer.itemData(idx);
 
             if (self.backing_allocator.rawResize(data, log2_align, new_len, ret_addr)) {
 
-                _ = self.buffer.cache.orderedRemove(idx);
+                data = self.buffer.cache.orderedRemove(idx);
 
                 // The only reason this would fail is because
                 // the buffer allocator couldn't resize the array.
                 // We know, however, that the capacity of the array
                 // is already large enough for this insertion.
+
+                data.len = new_len;
                 
                 self.buffer.deposit(data) catch unreachable;
 
