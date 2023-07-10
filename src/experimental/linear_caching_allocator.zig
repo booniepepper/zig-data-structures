@@ -1,4 +1,73 @@
 
+///////////////////////////////////////////////////////////////
+//// Motivation and Explanation for LinearCachingAllocator ////
+
+// -- General Introduction --
+//
+//    Even though this allocator employs a custom binary search
+//    similar to lower-bound lookup, it deserve the name linear
+//    for a number of reasons. 
+//
+//    Most importantly, it has a linear growth factor - for 
+//    every new allocation not currently cached, it increases
+//    the cache size by one. 
+//
+//    Likewise, the caching allocator needs to scan for unused
+//    blocks once it locates a segment of the cache that can 
+//    fulfill the size request. In the worst case, this is
+//    O(N), as each element could be the same size and all blocks
+//    could currently be in use.
+//
+//    However, in a fresh cache where all blocks are free, the lookup
+//    will be O(log(N)). For each "hole" that is added via blocks
+//    being marked as used, we could assume that we will have to advance
+//    beyond said hole to find the next free block. In general, this
+//    means our searches will be O(log(N)) + n where n is usually
+//    signficantly less than N, but at worst is equal.
+//
+//    For optimal caching behavior, we want:
+//
+//        -- Enough cached memory to satisfy a range of requests
+//
+//        -- Frequent check-ins from used blocks to restore holes
+//
+// -- Why use an array of indpendent `u8 slices? -- 
+//
+//    A typical implementation strategy for free-list style allocators
+//    (or cascading allocators more generally) is to embed a link
+//    next to the allocation itself (an intrusive link). This works
+//    where it is safe to assume that all memory will be accessible
+//    from a common memory pool. However, this allocator supports
+//    caching memory to devices other than host memory. In other words,
+//    we could create a segmentation fault trying to read links on
+//    a different device.
+//
+//    Device memory may also need to be allocated along more peculiar bounds
+//    and accessing them like they were host memory can cause segmentation
+//    faults even on valid elements. We therefore rely on the backing_allocator
+//    to return proper alignment by default.
+//
+// -- Intended use cases and assumptions ---
+//
+//    This allocator was designed to be for a certain set of assumptions:
+//
+//    1. ASSUMES: that batch-style free is desirable. The cache can be
+//    dumped all at once using the "clear" function. Likewise, the cache
+//    can be primed by using the "addToCache" function to preallocate
+//    memory - "warming" the cache before use.
+//
+//    2. ASSUMES: that new allocations can be predicted via the size of old
+//    allocations. This prevents the cache from continuing to grow
+//    linearly.
+//
+//    3. ASSUMES: that alloc and free will be called cyclically. There
+//    is no benefit to using this allocator in a program that only
+//    calls alloc and free once for a given item.
+//
+//    NOTE: the backing_backing allocator can be reassigned for different
+//    underyling allocators to be used. By default, it is the page_allocator.
+
+
 const std = @import("std");
 
 const OrderedCache = struct {
@@ -150,17 +219,32 @@ const OrderedCache = struct {
         // insert is capcity checked -- add to cache
         try self.cache.insert(idx, .{ .data = data });
     }
-};        
 
-// Similar to the GeneralPurposeAllocator, the CachingAllocator
-// will support bit alignment within [1, 2048]. Each step up
-// in index will be equivalent to another power of two for
-// alignment. So tabl[0] : align 1, table[3] : align 4...
+    pub fn addToCache(
+        self: *Self, 
+        comptime T: type, 
+        sizes: [] const usize, 
+        allocator: *std.mem.Allocator
+    ) !void {
+
+        try self.cache.ensureUnusedCapacity(sizes.len);
+
+        for (sizes) |len| {
+
+            var data = try allocator.alloc(T, len);
+
+            self.deposit(std.mem.sliceAsBytes(data)) catch {
+                allocator.free(data);
+                return std.mem.Allocator.Error.OutOfMemory;
+            };
+        }
+    }
+};        
 
 // I'm making a distinction for a CPU allocator because
 // other devices can use the caching allocator as well.
 
-const CPUCachingAllocator = struct {
+const LinearCachingAllocator = struct {
 
     const Self = @This();
 
@@ -258,6 +342,14 @@ const CPUCachingAllocator = struct {
         self.buffer.deposit(old_mem) catch {
             self.backing_allocator.rawFree(old_mem, log2_align, ret_addr);
         };
+    }
+
+    pub fn addToCache(
+        self: *Self, 
+        comptime T: type, 
+        sizes: [] const usize
+    ) !void {
+        return self.buffer.addToCache(T, sizes, &self.backing_allocator);
     }
 };
 
@@ -391,39 +483,39 @@ test "OrderedCache: basic heuristic testing" {
 }
 
 /////////////////////////////////////////////////////////
-/////// CPUCachingAllocator Testing Section /////////////
+/////// LinearCachingAllocator Testing Section /////////////
 
-test "CPUCachingAllocator: initialization" {
+test "LinearCachingAllocator: initialization" {
 
     const TypeA = struct {
         x: usize = 0      
     };
 
-    var cpu_caching_allocator = CPUCachingAllocator{ };
+    var caching_allocator = LinearCachingAllocator{ };
 
-    defer cpu_caching_allocator.deinit();
+    defer caching_allocator.deinit();
 
-    var allocator = cpu_caching_allocator.allocator();
+    var allocator = caching_allocator.allocator();
 
     var a = try allocator.alloc(TypeA, 10);
 
     allocator.free(a);
 
-    try std.testing.expectEqual(cpu_caching_allocator.buffer.size(), 1);
+    try std.testing.expectEqual(caching_allocator.buffer.size(), 1);
 
 }
 
-test "CPUCachingAllocator: basic cache utilization" {
+test "LinearCachingAllocator: basic cache utilization" {
 
     const TypeA = struct {
         x: usize = 0      
     };
 
-    var cpu_caching_allocator = CPUCachingAllocator{ };
+    var caching_allocator = LinearCachingAllocator{ };
 
-    defer cpu_caching_allocator.deinit();
+    defer caching_allocator.deinit();
 
-    var allocator = cpu_caching_allocator.allocator();
+    var allocator = caching_allocator.allocator();
 
     var a = try allocator.alloc(TypeA, 10);
 
@@ -436,7 +528,7 @@ test "CPUCachingAllocator: basic cache utilization" {
     try std.testing.expect(b.ptr == c.ptr);
 }
 
-test "CPUCachingAllocator: alignment" {
+test "LinearCachingAllocator: alignment" {
 
     // TypeA will be aligned by usize, and TypeB
     // will be forced to go up rung in alignment
@@ -458,11 +550,11 @@ test "CPUCachingAllocator: alignment" {
         try std.testing.expect(log2_a < log2_b);
     }
 
-    var cpu_caching_allocator = CPUCachingAllocator{ };
+    var caching_allocator = LinearCachingAllocator{ };
 
-    defer cpu_caching_allocator.deinit();
+    defer caching_allocator.deinit();
 
-    var allocator = cpu_caching_allocator.allocator();
+    var allocator = caching_allocator.allocator();
 
     var a = try allocator.alloc(TypeA, 10);
     try std.testing.expectEqual(a.len, 10);
@@ -476,7 +568,7 @@ test "CPUCachingAllocator: alignment" {
 
     allocator.free(b);
 
-    try std.testing.expectEqual(cpu_caching_allocator.buffer.size(), 1);
+    try std.testing.expectEqual(caching_allocator.buffer.size(), 1);
 
     // attempt to iterate through items
 
@@ -484,4 +576,130 @@ test "CPUCachingAllocator: alignment" {
         item.x = 0;
         item.y = false;
     }
+}
+
+test "LinearCachingAllocator: resize" {
+
+    // So testing resize is tough. Resizes can "fail"
+    // legitimately. That's why they return a bool and
+    // not an error. Unfortunately, that means it's
+    // awkward to test it directly. 
+
+    // That said, we can keep a few things in mind:
+
+    // 1. The resize function dispatches to the
+    //    backing_allocator.rawResize function.
+    //    Therfore, we would technically be
+    //    testing that ultimately.
+
+    // 2. Because of 1, the only way we can be
+    //    the source of failure is by either
+    //    failing to find the memory in cache,
+    //    identifying the wrong memory, failing
+    //    to deposit the memory, or leaking the
+    //    memory after resize.
+
+    // At this point, the deposit function is well
+    // established. So we need to show that the
+    // search function locateMemory identifies the
+    // correct memory in cache, and returns null
+    // on invalid requests.
+
+    const rand = @import("std").rand;
+
+    const TypeA = struct {
+        x: usize = 0      
+    };
+
+    var caching_allocator = LinearCachingAllocator{ };
+
+    defer caching_allocator.deinit();
+
+    var allocator = caching_allocator.allocator();
+
+    var PCG = rand.Pcg.init(42);
+    var pcg = PCG.random();
+
+    // To test locateMemory, we'll allocate in 100
+    // elements and force it to find the element after
+    // depositing it.
+
+    for (0..100) |_| {
+
+        var n = pcg.int(usize) % 100;
+
+        n = if(n == 0) 1 else n;
+
+        var data = try allocator.alloc(TypeA, n);
+
+        // deposit into cache...
+        allocator.free(data); 
+
+        var check: []u8 = std.mem.sliceAsBytes(data);
+
+        // lookup memory in allocator cache...
+        var index = caching_allocator.buffer.locateMemory(check);
+
+        // null means we didn't find it.
+        try std.testing.expect(index != null);
+
+        var item = caching_allocator.buffer.itemData(index.?);
+
+        // ensure that it is the same data.
+        try std.testing.expect(@intFromPtr(check.ptr) == @intFromPtr(item.ptr));
+    }
+    
+    // we need to be beyond the heuristic to test.
+    var data = try allocator.alloc(TypeA, 300);
+
+    { // check that un-cached memory isn't "found".
+        var check: []u8 = std.mem.sliceAsBytes(data);
+        var index = caching_allocator.buffer.locateMemory(check);
+        try std.testing.expect(index == null);
+    }
+
+    // deposit into cache...
+    allocator.free(data); 
+
+    { // check that cached memory is found.
+        var check: []u8 = std.mem.sliceAsBytes(data);
+        var index = caching_allocator.buffer.locateMemory(check);
+        try std.testing.expect(index != null);
+        var item = caching_allocator.buffer.itemData(index.?);
+        try std.testing.expect(@intFromPtr(check.ptr) == @intFromPtr(item.ptr));
+    }
+}
+
+test "LinearCachingAllocator: cache-warming" {
+
+    const TypeA = struct {
+        x: usize = 0      
+    };
+
+    var caching_allocator = LinearCachingAllocator{ };
+
+    defer caching_allocator.deinit();
+
+    try caching_allocator.addToCache(
+        TypeA, &[_]usize{ 100, 200, 300, 400, 500, 600 }
+    );
+
+    try std.testing.expectEqual(caching_allocator.buffer.size(), 6);
+    try std.testing.expectEqual(caching_allocator.buffer.itemSize(0), 100 * @bitSizeOf(TypeA) / @bitSizeOf(u8));
+    try std.testing.expectEqual(caching_allocator.buffer.itemSize(1), 200 * @bitSizeOf(TypeA) / @bitSizeOf(u8));
+    try std.testing.expectEqual(caching_allocator.buffer.itemSize(2), 300 * @bitSizeOf(TypeA) / @bitSizeOf(u8));
+    try std.testing.expectEqual(caching_allocator.buffer.itemSize(3), 400 * @bitSizeOf(TypeA) / @bitSizeOf(u8));
+    try std.testing.expectEqual(caching_allocator.buffer.itemSize(4), 500 * @bitSizeOf(TypeA) / @bitSizeOf(u8));
+    try std.testing.expectEqual(caching_allocator.buffer.itemSize(5), 600 * @bitSizeOf(TypeA) / @bitSizeOf(u8));
+
+    try caching_allocator.addToCache(
+        TypeA, &[_]usize{ 100, 200, 300, 400, 500 }
+    );
+
+    try std.testing.expectEqual(caching_allocator.buffer.size(), 11);
+    try std.testing.expectEqual(caching_allocator.buffer.itemSize(1), 100 * @bitSizeOf(TypeA) / @bitSizeOf(u8));
+    try std.testing.expectEqual(caching_allocator.buffer.itemSize(3), 200 * @bitSizeOf(TypeA) / @bitSizeOf(u8));
+    try std.testing.expectEqual(caching_allocator.buffer.itemSize(5), 300 * @bitSizeOf(TypeA) / @bitSizeOf(u8));
+    try std.testing.expectEqual(caching_allocator.buffer.itemSize(7), 400 * @bitSizeOf(TypeA) / @bitSizeOf(u8));
+    try std.testing.expectEqual(caching_allocator.buffer.itemSize(9), 500 * @bitSizeOf(TypeA) / @bitSizeOf(u8));
 }
