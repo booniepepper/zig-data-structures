@@ -220,8 +220,6 @@ const OrderedCache = struct {
         try self.cache.insert(idx, .{ .data = data });
     }
 
-<<<<<<< HEAD:src/experimental/cpu_caching_allocator.zig
-=======
     pub fn addToCache(
         self: *Self, 
         comptime T: type, 
@@ -243,7 +241,6 @@ const OrderedCache = struct {
     }
 };        
 
->>>>>>> 1d6af1ed59b8b6564b2d7b45f91f01222e2ea570:src/experimental/linear_caching_allocator.zig
 // I'm making a distinction for a CPU allocator because
 // other devices can use the caching allocator as well.
 
@@ -581,11 +578,7 @@ test "LinearCachingAllocator: alignment" {
     }
 }
 
-<<<<<<< HEAD:src/experimental/cpu_caching_allocator.zig
-test "CPUCachingAllocator: resize" {
-=======
 test "LinearCachingAllocator: resize" {
->>>>>>> 1d6af1ed59b8b6564b2d7b45f91f01222e2ea570:src/experimental/linear_caching_allocator.zig
 
     // So testing resize is tough. Resizes can "fail"
     // legitimately. That's why they return a bool and
@@ -618,19 +611,11 @@ test "LinearCachingAllocator: resize" {
         x: usize = 0      
     };
 
-<<<<<<< HEAD:src/experimental/cpu_caching_allocator.zig
-    var cpu_caching_allocator = CPUCachingAllocator{ };
-
-    defer cpu_caching_allocator.deinit();
-
-    var allocator = cpu_caching_allocator.allocator();
-=======
     var caching_allocator = LinearCachingAllocator{ };
 
     defer caching_allocator.deinit();
 
     var allocator = caching_allocator.allocator();
->>>>>>> 1d6af1ed59b8b6564b2d7b45f91f01222e2ea570:src/experimental/linear_caching_allocator.zig
 
     var PCG = rand.Pcg.init(42);
     var pcg = PCG.random();
@@ -653,20 +638,12 @@ test "LinearCachingAllocator: resize" {
         var check: []u8 = std.mem.sliceAsBytes(data);
 
         // lookup memory in allocator cache...
-<<<<<<< HEAD:src/experimental/cpu_caching_allocator.zig
-        var index = cpu_caching_allocator.buffer.locateMemory(check);
-=======
         var index = caching_allocator.buffer.locateMemory(check);
->>>>>>> 1d6af1ed59b8b6564b2d7b45f91f01222e2ea570:src/experimental/linear_caching_allocator.zig
 
         // null means we didn't find it.
         try std.testing.expect(index != null);
 
-<<<<<<< HEAD:src/experimental/cpu_caching_allocator.zig
-        var item = cpu_caching_allocator.buffer.itemData(index.?);
-=======
         var item = caching_allocator.buffer.itemData(index.?);
->>>>>>> 1d6af1ed59b8b6564b2d7b45f91f01222e2ea570:src/experimental/linear_caching_allocator.zig
 
         // ensure that it is the same data.
         try std.testing.expect(@intFromPtr(check.ptr) == @intFromPtr(item.ptr));
@@ -677,11 +654,7 @@ test "LinearCachingAllocator: resize" {
 
     { // check that un-cached memory isn't "found".
         var check: []u8 = std.mem.sliceAsBytes(data);
-<<<<<<< HEAD:src/experimental/cpu_caching_allocator.zig
-        var index = cpu_caching_allocator.buffer.locateMemory(check);
-=======
         var index = caching_allocator.buffer.locateMemory(check);
->>>>>>> 1d6af1ed59b8b6564b2d7b45f91f01222e2ea570:src/experimental/linear_caching_allocator.zig
         try std.testing.expect(index == null);
     }
 
@@ -690,14 +663,6 @@ test "LinearCachingAllocator: resize" {
 
     { // check that cached memory is found.
         var check: []u8 = std.mem.sliceAsBytes(data);
-<<<<<<< HEAD:src/experimental/cpu_caching_allocator.zig
-        var index = cpu_caching_allocator.buffer.locateMemory(check);
-        try std.testing.expect(index != null);
-        var item = cpu_caching_allocator.buffer.itemData(index.?);
-        try std.testing.expect(@intFromPtr(check.ptr) == @intFromPtr(item.ptr));
-    }
-}
-=======
         var index = caching_allocator.buffer.locateMemory(check);
         try std.testing.expect(index != null);
         var item = caching_allocator.buffer.itemData(index.?);
@@ -738,4 +703,3 @@ test "LinearCachingAllocator: cache-warming" {
     try std.testing.expectEqual(caching_allocator.buffer.itemSize(7), 400 * @bitSizeOf(TypeA) / @bitSizeOf(u8));
     try std.testing.expectEqual(caching_allocator.buffer.itemSize(9), 500 * @bitSizeOf(TypeA) / @bitSizeOf(u8));
 }
->>>>>>> 1d6af1ed59b8b6564b2d7b45f91f01222e2ea570:src/experimental/linear_caching_allocator.zig
