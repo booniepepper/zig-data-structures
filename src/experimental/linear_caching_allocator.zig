@@ -311,7 +311,7 @@ pub const LinearCachingAllocator = struct {
 
             if (self.backing_allocator.rawResize(data, log2_align, new_len, ret_addr)) {
 
-                data = self.buffer.cache.orderedRemove(idx);
+                data = self.buffer.cache.orderedRemove(idx).data;
 
                 // The only reason this would fail is because
                 // the buffer allocator couldn't resize the array.
