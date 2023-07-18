@@ -21,7 +21,7 @@ pub fn EvictingStack(comptime T: type, comptime capacity: usize) type {
             // We'll insert at index i
             const i = @mod(self.first + self.len, capacity);
 
-            // The next index after i, possibly wrappring around
+            // The next index after i, possibly wrapping around
             const j = @mod(i + 1, capacity);
 
             var dropped: ?T = null;
