@@ -17,16 +17,17 @@ pub fn BinaryTree(comptime T: type) type {
 
         /// Iterate over each child node, returning the count of all nodes including itself.
         /// This operation is O(N).
-        pub fn len(self: Self) usize {
+        pub fn len(self: *const Self) usize {
             var count: usize = 1;
 
-            if (self.lhs) |lhs| count += lhs.len();
-            if (self.rhs) |rhs| count += rhs.len();
+            if (self.lhs) |*lhs| count += lhs.*.len();
+            if (self.rhs) |*rhs| count += rhs.*.len();
 
             return count;
         }
 
-        /// Reverse the tree starting from this node in-place.
+        /// Reverse the tree starting from this node in-place. Why would anyone
+        /// need this? Why does it come up in tech interviews?
         /// This operation is O(N).
         pub fn reverse(self: *Self) void {
             const temp = self.lhs;
@@ -34,8 +35,8 @@ pub fn BinaryTree(comptime T: type) type {
             self.lhs = self.rhs;
             self.rhs = temp;
 
-            if (self.lhs) |lhs| lhs.reverse();
-            if (self.rhs) |rhs| rhs.reverse();
+            if (self.lhs) |*lhs| lhs.*.reverse();
+            if (self.rhs) |*rhs| rhs.*.reverse();
         }
     };
 }
