@@ -177,7 +177,7 @@ test "((5 - 4) + (0 + 2)) + ((6 - 2) + (2 + 3))" {
     // / \ / \ / \ / \
     // 3 2 2 6 2 0 4 5
 
-    var idk = negativeSix.reverse();
-    try testing.expectEqual(@as(i32, 0), Math.resolve(idk));
-    try testing.expectEqual(@as(usize, 15), idk.count());
+    var zero = negativeSix.reverse();
+    try testing.expectEqual(@as(i32, 0), Math.resolve(zero));
+    try testing.expectEqual(@as(usize, 15), zero.count());
 }
