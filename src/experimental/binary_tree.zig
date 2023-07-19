@@ -17,13 +17,13 @@ pub fn BinaryTree(comptime T: type) type {
 
         /// Iterate over each child node, returning the count of all nodes including itself.
         /// This operation is O(N).
-        pub fn len(self: *const Self) usize {
-            var count: usize = 1;
+        pub fn count(self: *const Self) usize {
+            var n: usize = 1;
 
-            if (self.lhs) |lhs| count += lhs.len();
-            if (self.rhs) |rhs| count += rhs.len();
+            if (self.lhs) |lhs| n += lhs.count();
+            if (self.rhs) |rhs| n += rhs.count();
 
-            return count;
+            return n;
         }
 
         /// Reverse the tree starting from this node in-place. Why would anyone
@@ -65,7 +65,7 @@ test "1 + 2 = 3" {
     const T = BinaryTree(Math);
 
     var plus = T{ .data = .plus };
-    try testing.expectEqual(@as(usize, 1), plus.len());
+    try testing.expectEqual(@as(usize, 1), plus.count());
 
     var one = T{ .data = Math{ .n = 1 } };
     var two = T{ .data = Math{ .n = 2 } };
@@ -74,7 +74,7 @@ test "1 + 2 = 3" {
     plus.rhs = &two;
 
     try testing.expectEqual(@as(i32, 3), Math.resolve(&plus));
-    try testing.expectEqual(@as(usize, 3), plus.len());
+    try testing.expectEqual(@as(usize, 3), plus.count());
 }
 
 test "((5 - 4) + (0 + 2)) + ((5 - 6) + (7 - 8))" {
@@ -97,7 +97,7 @@ test "((5 - 4) + (0 + 2)) + ((5 - 6) + (7 - 8))" {
         .rhs = &_one_rhs,
     };
     try testing.expectEqual(@as(i32, 1), Math.resolve(&one));
-    try testing.expectEqual(@as(usize, 3), one.len());
+    try testing.expectEqual(@as(usize, 3), one.count());
 
     var _two_lhs = T{ .data = .{ .n = 0 } };
     var _two_rhs = T{ .data = .{ .n = 2 } };
@@ -107,11 +107,11 @@ test "((5 - 4) + (0 + 2)) + ((5 - 6) + (7 - 8))" {
         .rhs = &_two_rhs,
     };
     try testing.expectEqual(@as(i32, 2), Math.resolve(&two));
-    try testing.expectEqual(@as(usize, 3), two.len());
+    try testing.expectEqual(@as(usize, 3), two.count());
 
     var three = T{ .data = .plus, .lhs = &one, .rhs = &two };
     try testing.expectEqual(@as(i32, 3), Math.resolve(&three));
-    try testing.expectEqual(@as(usize, 7), three.len());
+    try testing.expectEqual(@as(usize, 7), three.count());
 
     var _four_lhs = T{ .data = .{ .n = 6 } };
     var _four_rhs = T{ .data = .{ .n = 2 } };
@@ -121,7 +121,7 @@ test "((5 - 4) + (0 + 2)) + ((5 - 6) + (7 - 8))" {
         .rhs = &_four_rhs,
     };
     try testing.expectEqual(@as(i32, 4), Math.resolve(&four));
-    try testing.expectEqual(@as(usize, 3), four.len());
+    try testing.expectEqual(@as(usize, 3), four.count());
 
     var _five_lhs = T{ .data = .{ .n = 2 } };
     var _five_rhs = T{ .data = .{ .n = 3 } };
@@ -131,13 +131,13 @@ test "((5 - 4) + (0 + 2)) + ((5 - 6) + (7 - 8))" {
         .rhs = &_five_rhs,
     };
     try testing.expectEqual(@as(i32, 5), Math.resolve(&five));
-    try testing.expectEqual(@as(usize, 3), five.len());
+    try testing.expectEqual(@as(usize, 3), five.count());
 
     var nine = T{ .data = .plus, .lhs = &four, .rhs = &five };
     try testing.expectEqual(@as(i32, 9), Math.resolve(&nine));
-    try testing.expectEqual(@as(usize, 7), nine.len());
+    try testing.expectEqual(@as(usize, 7), nine.count());
 
     var negativeSix = T{ .data = .minus, .lhs = &three, .rhs = &nine };
     try testing.expectEqual(@as(i32, -6), Math.resolve(&negativeSix));
-    try testing.expectEqual(@as(usize, 15), negativeSix.len());
+    try testing.expectEqual(@as(usize, 15), negativeSix.count());
 }
