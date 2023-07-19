@@ -3,6 +3,8 @@ const debug = std.debug;
 const assert = debug.assert;
 const testing = std.testing;
 
+pub const Chirality = enum { lhs, rhs };
+
 /// A very simple tree where every node is a tree.
 /// This is primarily intended to be a backing data structure for more
 /// sophisticated tree-based data structures with tuned insertion logic,
@@ -37,6 +39,25 @@ pub fn BinaryTree(comptime T: type) type {
 
             if (self.lhs) |lhs| lhs.reverse();
             if (self.rhs) |rhs| rhs.reverse();
+        }
+
+        /// Assigns a node to one of the sides of this node.
+        /// Returns a pointer to self.
+        pub fn assign(self: *Self, side: Chirality, subtree: *Self) *Self {
+            switch (side) {
+                .lhs => self.lhs = subtree,
+                .rhs => self.rhs = subtree,
+            }
+
+            return self;
+        }
+
+        /// Sets both lhs and rhs to null.
+        /// Returns a pointer to self.
+        pub fn reset(self: *Self) *Self {
+            self.lhs = null;
+            self.rhs = null;
+            return self;
         }
     };
 }
