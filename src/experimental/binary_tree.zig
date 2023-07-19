@@ -20,8 +20,8 @@ pub fn BinaryTree(comptime T: type) type {
         pub fn len(self: *const Self) usize {
             var count: usize = 1;
 
-            if (self.lhs) |*lhs| count += lhs.*.len();
-            if (self.rhs) |*rhs| count += rhs.*.len();
+            if (self.lhs) |lhs| count += lhs.len();
+            if (self.rhs) |rhs| count += rhs.len();
 
             return count;
         }
@@ -35,8 +35,8 @@ pub fn BinaryTree(comptime T: type) type {
             self.lhs = self.rhs;
             self.rhs = temp;
 
-            if (self.lhs) |*lhs| lhs.*.reverse();
-            if (self.rhs) |*rhs| rhs.*.reverse();
+            if (self.lhs) |lhs| lhs.reverse();
+            if (self.rhs) |rhs| rhs.reverse();
         }
     };
 }
