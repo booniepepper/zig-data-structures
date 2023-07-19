@@ -47,14 +47,14 @@ pub fn BinaryTree(comptime T: type) type {
 
         /// Assigns a node to one of the sides of this node.
         ///
-        /// Returns a pointer to self.
+        /// Returns a pointer to subtree.
         pub fn assign(self: *Self, side: Chirality, subtree: *Self) *Self {
             switch (side) {
                 .lhs => self.lhs = subtree,
                 .rhs => self.rhs = subtree,
             }
 
-            return self;
+            return subtree;
         }
 
         /// Sets both lhs and rhs to null.
