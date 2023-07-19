@@ -3,6 +3,8 @@ const debug = std.debug;
 const assert = debug.assert;
 const testing = std.testing;
 
+pub const Chirality = enum { lhs, rhs };
+
 /// A very simple tree where every node is a tree.
 /// This is primarily intended to be a backing data structure for more
 /// sophisticated tree-based data structures with tuned insertion logic,
@@ -29,14 +31,39 @@ pub fn BinaryTree(comptime T: type) type {
         /// Reverse the tree starting from this node in-place. Why would anyone
         /// need this? Why does it come up in tech interviews?
         /// This operation is O(N).
-        pub fn reverse(self: *Self) void {
+        ///
+        /// Returns a pointer to self.
+        pub fn reverse(self: *Self) *Self {
             const temp = self.lhs;
 
             self.lhs = self.rhs;
             self.rhs = temp;
 
-            if (self.lhs) |lhs| lhs.reverse();
-            if (self.rhs) |rhs| rhs.reverse();
+            if (self.lhs) |lhs| _ = lhs.reverse();
+            if (self.rhs) |rhs| _ = rhs.reverse();
+
+            return self;
+        }
+
+        /// Assigns a node to one of the sides of this node.
+        ///
+        /// Returns a pointer to subtree.
+        pub fn assign(self: *Self, side: Chirality, subtree: *Self) *Self {
+            switch (side) {
+                .lhs => self.lhs = subtree,
+                .rhs => self.rhs = subtree,
+            }
+
+            return subtree;
+        }
+
+        /// Sets both lhs and rhs to null.
+        ///
+        /// Returns a pointer to self.
+        pub fn reset(self: *Self) *Self {
+            self.lhs = null;
+            self.rhs = null;
+            return self;
         }
     };
 }
@@ -77,7 +104,7 @@ test "1 + 2 = 3" {
     try testing.expectEqual(@as(usize, 3), plus.count());
 }
 
-test "((5 - 4) + (0 + 2)) + ((5 - 6) + (7 - 8))" {
+test "((5 - 4) + (0 + 2)) + ((6 - 2) + (2 + 3))" {
     const T = BinaryTree(Math);
 
     // We'll build up this:
@@ -140,4 +167,17 @@ test "((5 - 4) + (0 + 2)) + ((5 - 6) + (7 - 8))" {
     var negativeSix = T{ .data = .minus, .lhs = &three, .rhs = &nine };
     try testing.expectEqual(@as(i32, -6), Math.resolve(&negativeSix));
     try testing.expectEqual(@as(usize, 15), negativeSix.count());
+
+    // Deep reversal will flip the subtraction operations.
+    //        -
+    //       / \
+    //      +   +
+    //    / |   | \
+    //  +   -   +   -
+    // / \ / \ / \ / \
+    // 3 2 2 6 2 0 4 5
+
+    var zero = negativeSix.reverse();
+    try testing.expectEqual(@as(i32, 0), Math.resolve(zero));
+    try testing.expectEqual(@as(usize, 15), zero.count());
 }
