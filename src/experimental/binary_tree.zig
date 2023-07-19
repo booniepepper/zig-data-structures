@@ -65,7 +65,7 @@ test "1 + 2 = 3" {
     const T = BinaryTree(Math);
 
     var plus = T{ .data = .plus };
-    try testing.expect(plus.len() == 1);
+    try testing.expectEqual(@as(usize, 1), plus.len());
 
     var one = T{ .data = Math{ .n = 1 } };
     var two = T{ .data = Math{ .n = 2 } };
@@ -73,8 +73,8 @@ test "1 + 2 = 3" {
     plus.lhs = &one;
     plus.rhs = &two;
 
-    try testing.expect(plus.len() == 3);
-    try testing.expect(3 == Math.resolve(&plus));
+    try testing.expectEqual(@as(i32, 3), Math.resolve(&plus));
+    try testing.expectEqual(@as(usize, 3), plus.len());
 }
 
 test "((5 - 4) + (0 + 2)) + ((5 - 6) + (7 - 8))" {
@@ -96,7 +96,8 @@ test "((5 - 4) + (0 + 2)) + ((5 - 6) + (7 - 8))" {
         .lhs = &_one_lhs,
         .rhs = &_one_rhs,
     };
-    try testing.expect(Math.resolve(&one) == 1);
+    try testing.expectEqual(@as(i32, 1), Math.resolve(&one));
+    try testing.expectEqual(@as(usize, 3), one.len());
 
     var _two_lhs = T{ .data = .{ .n = 0 } };
     var _two_rhs = T{ .data = .{ .n = 2 } };
@@ -105,10 +106,12 @@ test "((5 - 4) + (0 + 2)) + ((5 - 6) + (7 - 8))" {
         .lhs = &_two_lhs,
         .rhs = &_two_rhs,
     };
-    try testing.expect(Math.resolve(&two) == 2);
+    try testing.expectEqual(@as(i32, 2), Math.resolve(&two));
+    try testing.expectEqual(@as(usize, 3), two.len());
 
     var three = T{ .data = .plus, .lhs = &one, .rhs = &two };
-    try testing.expect(Math.resolve(&three) == 3);
+    try testing.expectEqual(@as(i32, 3), Math.resolve(&three));
+    try testing.expectEqual(@as(usize, 7), three.len());
 
     var _four_lhs = T{ .data = .{ .n = 6 } };
     var _four_rhs = T{ .data = .{ .n = 2 } };
@@ -117,7 +120,8 @@ test "((5 - 4) + (0 + 2)) + ((5 - 6) + (7 - 8))" {
         .lhs = &_four_lhs,
         .rhs = &_four_rhs,
     };
-    try testing.expect(Math.resolve(&four) == 4);
+    try testing.expectEqual(@as(i32, 4), Math.resolve(&four));
+    try testing.expectEqual(@as(usize, 3), four.len());
 
     var _five_lhs = T{ .data = .{ .n = 2 } };
     var _five_rhs = T{ .data = .{ .n = 3 } };
@@ -126,11 +130,14 @@ test "((5 - 4) + (0 + 2)) + ((5 - 6) + (7 - 8))" {
         .lhs = &_five_lhs,
         .rhs = &_five_rhs,
     };
-    try testing.expect(Math.resolve(&five) == 5);
+    try testing.expectEqual(@as(i32, 5), Math.resolve(&five));
+    try testing.expectEqual(@as(usize, 3), five.len());
 
     var nine = T{ .data = .plus, .lhs = &four, .rhs = &five };
-    try testing.expect(Math.resolve(&nine) == 9);
+    try testing.expectEqual(@as(i32, 9), Math.resolve(&nine));
+    try testing.expectEqual(@as(usize, 7), nine.len());
 
     var negativeSix = T{ .data = .minus, .lhs = &three, .rhs = &nine };
-    try testing.expect(Math.resolve(&negativeSix) == -6);
+    try testing.expectEqual(@as(i32, -6), Math.resolve(&negativeSix));
+    try testing.expectEqual(@as(usize, 15), negativeSix.len());
 }
