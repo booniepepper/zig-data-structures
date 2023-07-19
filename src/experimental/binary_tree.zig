@@ -31,17 +31,22 @@ pub fn BinaryTree(comptime T: type) type {
         /// Reverse the tree starting from this node in-place. Why would anyone
         /// need this? Why does it come up in tech interviews?
         /// This operation is O(N).
-        pub fn reverse(self: *Self) void {
+        ///
+        /// Returns a pointer to self.
+        pub fn reverse(self: *Self) *Self {
             const temp = self.lhs;
 
             self.lhs = self.rhs;
             self.rhs = temp;
 
-            if (self.lhs) |lhs| lhs.reverse();
-            if (self.rhs) |rhs| rhs.reverse();
+            if (self.lhs) |lhs| _ = lhs.reverse();
+            if (self.rhs) |rhs| _ = rhs.reverse();
+
+            return self;
         }
 
         /// Assigns a node to one of the sides of this node.
+        ///
         /// Returns a pointer to self.
         pub fn assign(self: *Self, side: Chirality, subtree: *Self) *Self {
             switch (side) {
@@ -53,6 +58,7 @@ pub fn BinaryTree(comptime T: type) type {
         }
 
         /// Sets both lhs and rhs to null.
+        ///
         /// Returns a pointer to self.
         pub fn reset(self: *Self) *Self {
             self.lhs = null;
@@ -98,7 +104,7 @@ test "1 + 2 = 3" {
     try testing.expectEqual(@as(usize, 3), plus.count());
 }
 
-test "((5 - 4) + (0 + 2)) + ((5 - 6) + (7 - 8))" {
+test "((5 - 4) + (0 + 2)) + ((6 - 2) + (2 + 3))" {
     const T = BinaryTree(Math);
 
     // We'll build up this:
@@ -161,4 +167,17 @@ test "((5 - 4) + (0 + 2)) + ((5 - 6) + (7 - 8))" {
     var negativeSix = T{ .data = .minus, .lhs = &three, .rhs = &nine };
     try testing.expectEqual(@as(i32, -6), Math.resolve(&negativeSix));
     try testing.expectEqual(@as(usize, 15), negativeSix.count());
+
+    // Deep reversal will flip the subtraction operations.
+    //        -
+    //       / \
+    //      +   +
+    //    / |   | \
+    //  +   -   +   -
+    // / \ / \ / \ / \
+    // 3 2 2 6 2 0 4 5
+
+    var idk = negativeSix.reverse();
+    try testing.expectEqual(@as(i32, 0), Math.resolve(idk));
+    try testing.expectEqual(@as(usize, 15), idk.count());
 }
