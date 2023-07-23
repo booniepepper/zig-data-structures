@@ -1,9 +1,8 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
 const debug = std.debug;
 const assert = debug.assert;
 const testing = std.testing;
-
-pub const Chirality = enum { lhs, rhs };
 
 /// A very simple tree where every node is a tree.
 /// This is primarily intended to be a backing data structure for more
@@ -31,39 +30,20 @@ pub fn BinaryTree(comptime T: type) type {
         /// Reverse the tree starting from this node in-place. Why would anyone
         /// need this? Why does it come up in tech interviews?
         /// This operation is O(N).
-        ///
-        /// Returns a pointer to self.
-        pub fn reverse(self: *Self) *Self {
+        pub fn reverse(self: *Self) void {
             const temp = self.lhs;
 
             self.lhs = self.rhs;
             self.rhs = temp;
 
-            if (self.lhs) |lhs| _ = lhs.reverse();
-            if (self.rhs) |rhs| _ = rhs.reverse();
-
-            return self;
-        }
-
-        /// Assigns a node to one of the sides of this node.
-        ///
-        /// Returns a pointer to subtree.
-        pub fn assign(self: *Self, side: Chirality, subtree: *Self) *Self {
-            switch (side) {
-                .lhs => self.lhs = subtree,
-                .rhs => self.rhs = subtree,
-            }
-
-            return subtree;
+            if (self.lhs) |lhs| lhs.reverse();
+            if (self.rhs) |rhs| rhs.reverse();
         }
 
         /// Sets both lhs and rhs to null.
-        ///
-        /// Returns a pointer to self.
-        pub fn reset(self: *Self) *Self {
+        pub fn prune(self: *Self) void {
             self.lhs = null;
             self.rhs = null;
-            return self;
         }
     };
 }
@@ -177,7 +157,8 @@ test "((5 - 4) + (0 + 2)) + ((6 - 2) + (2 + 3))" {
     // / \ / \ / \ / \
     // 3 2 2 6 2 0 4 5
 
-    var zero = negativeSix.reverse();
-    try testing.expectEqual(@as(i32, 0), Math.resolve(zero));
+    negativeSix.reverse();
+    var zero = negativeSix;
+    try testing.expectEqual(@as(i32, 0), Math.resolve(&zero));
     try testing.expectEqual(@as(usize, 15), zero.count());
 }
