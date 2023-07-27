@@ -249,10 +249,17 @@ pub const LinearCachingAllocator = struct {
 
     buffer: OrderedCache = OrderedCache.init(std.heap.page_allocator),
 
-    backing_allocator: std.mem.Allocator = std.heap.page_allocator,
+    backing_allocator: std.mem.Allocator,
 
     // TODO: Create a dummy mutex that can be swapped via policy
     mutex: std.Thread.Mutex = std.Thread.Mutex{ },
+
+    pub fn init(fallback: std.mem.Allocator) Self {
+        return Self {
+            .backing_allocator = fallback,
+            .buffer = OrderedCache.init(std.heap.page_allocator)
+        };
+    }
 
     pub fn clear(self: *Self) void {
         self.buffer.clear(&self.backing_allocator);
@@ -492,7 +499,7 @@ test "LinearCachingAllocator: initialization" {
         x: usize = 0      
     };
 
-    var caching_allocator = LinearCachingAllocator{ };
+    var caching_allocator = LinearCachingAllocator.init(std.heap.page_allocator);
 
     defer caching_allocator.deinit();
 
@@ -512,7 +519,7 @@ test "LinearCachingAllocator: basic cache utilization" {
         x: usize = 0      
     };
 
-    var caching_allocator = LinearCachingAllocator{ };
+    var caching_allocator = LinearCachingAllocator.init(std.heap.page_allocator);
 
     defer caching_allocator.deinit();
 
@@ -551,7 +558,7 @@ test "LinearCachingAllocator: alignment" {
         try std.testing.expect(log2_a < log2_b);
     }
 
-    var caching_allocator = LinearCachingAllocator{ };
+    var caching_allocator = LinearCachingAllocator.init(std.heap.page_allocator);
 
     defer caching_allocator.deinit();
 
@@ -612,7 +619,7 @@ test "LinearCachingAllocator: resize" {
         x: usize = 0      
     };
 
-    var caching_allocator = LinearCachingAllocator{ };
+    var caching_allocator = LinearCachingAllocator.init(std.heap.page_allocator);
 
     defer caching_allocator.deinit();
 
@@ -677,7 +684,7 @@ test "LinearCachingAllocator: cache-warming" {
         x: usize = 0      
     };
 
-    var caching_allocator = LinearCachingAllocator{ };
+    var caching_allocator = LinearCachingAllocator.init(std.heap.page_allocator);
 
     defer caching_allocator.deinit();
 
