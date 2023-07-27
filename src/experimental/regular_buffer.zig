@@ -177,29 +177,3 @@ inline fn VectorIteratorType(comptime T: type) type {
 pub inline fn VectorIterator(buffer: anytype) VectorIteratorType(@TypeOf(buffer.*)) {
     return .{ .ptr = buffer, .idx = 0 };
 }
-
-pub fn main() !void {  
-
-    var GPA = std.heap.GeneralPurposeAllocator(.{}){ };
-    const data1: [32]f16 = .{ 1.0 } ** 32;
-    const data2: [32]f16 = .{ 2.0 } ** 32;
-
-    var buffer = try RegularBuffer(f16, 32).initCapacity(GPA.allocator(), 2);
-
-
-    defer { 
-        buffer.deinit();
-        if (GPA.deinit() == .leak) {
-            @panic("LEAK DETECTED!");
-        }
-    }
-
-    try buffer.append(&data1);
-    try buffer.append(&data2);
-
-    var iter = VectorIterator(&buffer);
-
-    while (iter.next()) |v| {
-        std.debug.print("\n{}\n", .{ @reduce(std.builtin.ReduceOp.Add, v) });
-    }
-}
