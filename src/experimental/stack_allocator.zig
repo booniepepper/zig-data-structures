@@ -75,6 +75,10 @@ pub fn StackBuffer(comptime size: usize) type {
             }
             return true;
         }
+
+        pub inline fn usedSlice(self: *Self) []u8 {
+            return self.items[0..self.used];
+        }
     };
 }    
 
@@ -99,6 +103,10 @@ pub fn StackAllocator(comptime size: usize) type {
                 .backing_allocator = backing_allocator,
                 .stack_buffer = .{ },
             };
+        }
+
+        pub inline fn usedSlice(self: *Self) []u8 {
+            return self.stack_buffer.usedSlice();
         }
 
         pub fn allocator(self: *Self) std.mem.Allocator {        
