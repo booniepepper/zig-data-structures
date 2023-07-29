@@ -33,13 +33,13 @@ pub fn RegularBuffer(comptime T: type, comptime slice_size: usize) type {
             };
         }
 
-        pub fn itemCount(self: *const Self) usize {
+        pub fn count(self: *const Self) usize {
             return self.data.len / SliceSize;
         }
 
-        pub fn initCapacity(allocator: Allocator, count: usize) Allocator.Error!Self {
+        pub fn initCapacity(allocator: Allocator, size: usize) Allocator.Error!Self {
             var self = Self.init(allocator);
-            try self.ensureTotalCapacity(count * SliceSize);
+            try self.ensureTotalCapacity(size * SliceSize);
             return self;
         }
 

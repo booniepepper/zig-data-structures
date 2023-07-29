@@ -46,13 +46,13 @@ pub fn IrregularBuffer(comptime T: type) type {
             };
         }
 
-        pub fn itemCount(self: *const Self) usize {
+        pub fn len(self: *const Self) usize {
             return self.idxs.len;
         }
 
-        pub fn initCapacity(allocator: Allocator, data_size: usize, segments: usize) Allocator.Error!Self {
+        pub fn initCapacity(allocator: Allocator, data_capacity: usize, index_capacity: usize) Allocator.Error!Self {
             var self = Self.init(allocator);
-            try self.ensureTotalCapacity(data_size, segments);
+            try self.ensureTotalCapacity(data_capacity, index_capacity);
             return self;
         }
 
